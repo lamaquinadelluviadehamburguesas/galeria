@@ -26,4 +26,8 @@ export default [
   { css: '/imagenes/25.jpg', height: 350 },
   { css: '/imagenes/26.jpg', height: 550 },
   { css: '/imagenes/27.jpg', height: 450 },
+
+  
+
 ]
+
