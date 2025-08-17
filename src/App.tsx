@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import useMeasure from 'react-use-measure'
-import { useTransition, a } from '@react-spring/web'
-import { shuffle } from 'lodash'
+import React, { useState, useEffect, useMemo } from 'react';
+import useMeasure from 'react-use-measure';
+import { useTransition, a } from '@react-spring/web';
+import { shuffle } from 'lodash';
 
-import useMedia from './useMedia'
-import data from './data'
-
-import styles from './styles.module.css'
+import useMedia from './useMedia';
+import data from './data';
+import styles from './styles.module.css';
 
 interface ImageItem {
   css: string;
@@ -15,40 +14,37 @@ interface ImageItem {
 
 interface MasonryProps {
   onSelectImage: (image: ImageItem | null) => void;
-  isOverlayActive: boolean; // Nueva prop
+  isOverlayActive: boolean;
 }
 
 function Masonry({ onSelectImage, isOverlayActive }: MasonryProps) {
-  // Hook1: Tie media queries to the number of columns
-  const columns = useMedia(['(min-width: 1500px)', '(min-width: 1000px)', '(min-width: 600px)'], [5, 4, 3], 2)
-  // Hook2: Measure the width of the container element
-  const [ref, { width }] = useMeasure()
-  // Hook3: Hold items
-  const [items, set] = useState(data)
+  const columns = useMedia(['(min-width: 1500px)', '(min-width: 1000px)', '(min-width: 600px)'], [5, 4, 3], 2);
+  const [ref, { width }] = useMeasure();
+  const [items, set] = useState(data);
   const [hoveredItemKey, setHoveredItemKey] = useState<string | null>(null);
-  // Hook4: shuffle data every 2 seconds
+
   useEffect(() => {
     let t: number | undefined;
     if (!isOverlayActive) {
-      set(shuffle); // Forzar un shuffle inmediato al desactivarse el overlay
-      t = (window.setInterval(() => set(shuffle), 2000) as unknown) as number;
+      set(shuffle);
+      t = (window.setInterval(() => set(shuffle), 5000) as unknown) as number;
     }
     return () => {
       if (t) window.clearInterval(t);
     };
   }, [isOverlayActive]);
-  // Hook5: Form a grid of stacked items using width & columns we got from hooks 1 & 2
+
   const [heights, gridItems] = useMemo(() => {
-    let heights = new Array(columns).fill(0) // Each column gets a height starting with zero
+    let heights = new Array(columns).fill(0);
     let gridItems = items.map((child, i) => {
-      const column = heights.indexOf(Math.min(...heights)) // Basic masonry-grid placing, puts tile into the smallest column using Math.min
-      const x = (width / columns) * column // x = container width / number of columns * column index,
-      const y = (heights[column] += child.height / 2) - child.height / 2 // y = it's just the height of the current column
-      return { ...child, x, y, width: width / columns, height: child.height / 2 }
-    })
-    return [heights, gridItems]
-  }, [columns, items, width])
-  // Hook6: Turn the static grid values into animated transitions, any addition, removal or change will be animated
+      const column = heights.indexOf(Math.min(...heights));
+      const x = (width / columns) * column;
+      const y = (heights[column] += child.height / 2) - child.height / 2;
+      return { ...child, x, y, width: width / columns, height: child.height / 2 };
+    });
+    return [heights, gridItems];
+  }, [columns, items, width]);
+
   const transitions = useTransition(gridItems, {
     key: (item: { css: string; height: number }) => item.css,
     from: ({ x, y, width, height }) => ({ x, y, width, height, opacity: 0 }),
@@ -62,15 +58,15 @@ function Masonry({ onSelectImage, isOverlayActive }: MasonryProps) {
     leave: { height: 0, opacity: 0 },
     config: { mass: 5, tension: 500, friction: 100 },
     trail: 25,
-  })
-  // Render the grid
+  });
+
   return (
     <div
       ref={ref}
       className={styles.list}
       style={{
         height: Math.max(...heights),
-        opacity: isOverlayActive ? 0.3 : 1, // Opacidad condicional
+        opacity: isOverlayActive ? 0.3 : 1,
       }}
     >
       {transitions((style, item) => (
@@ -84,16 +80,82 @@ function Masonry({ onSelectImage, isOverlayActive }: MasonryProps) {
         </a.div>
       ))}
     </div>
-  )
+  );
 }
 
 export default function App() {
   const [selectedImage, setSelectedImage] = useState<ImageItem | null>(null);
+  const [currentIndex, setCurrentIndex] = useState<number | null>(null);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    if (selectedImage) {
+      const idx = data.findIndex(img => img.css === selectedImage.css);
+      setCurrentIndex(idx !== -1 ? idx : null);
+    } else {
+      setCurrentIndex(null);
+    }
+  }, [selectedImage]);
+
+  const nextImage = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (currentIndex !== null && currentIndex < data.length - 1) {
+      setSelectedImage(data[currentIndex + 1]);
+    }
+  };
+
+  const prevImage = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (currentIndex !== null && currentIndex > 0) {
+      setSelectedImage(data[currentIndex - 1]);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedImage) {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'ArrowRight') nextImage();
+        if (e.key === 'ArrowLeft') prevImage();
+        if (e.key === 'Escape') setSelectedImage(null);
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+    return () => {};
+  }, [selectedImage, currentIndex]);
+
+  // Manejo de deslizamiento táctil
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX);
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || touchStartX === null) return;
+    const currentX = e.touches[0].clientX;
+    const diff = touchStartX - currentX;
+    if (Math.abs(diff) > 50) { // Umbral de 50px para detectar deslizamiento
+      if (diff > 0) {
+        nextImage();
+      } else {
+        prevImage();
+      }
+      setIsDragging(false);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    setTouchStartX(null);
+  };
 
   return (
     <>
       <Masonry onSelectImage={setSelectedImage} isOverlayActive={!!selectedImage} />
-      {selectedImage && (
+      {selectedImage && currentIndex !== null && (
         <div
           style={{
             position: 'fixed',
@@ -108,7 +170,28 @@ export default function App() {
             zIndex: 1000,
           }}
           onClick={() => setSelectedImage(null)}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
+          <button
+            onClick={prevImage}
+            disabled={currentIndex === 0}
+            style={{
+              position: 'absolute',
+              left: 40,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              fontSize: 32,
+              background: 'none',
+              border: 'none',
+              color: 'white',
+              cursor: currentIndex === 0 ? 'not-allowed' : 'pointer',
+              zIndex: 1001,
+            }}
+          >
+            &#8592;
+          </button>
           <img
             src={selectedImage.css}
             alt="Ampliada"
@@ -116,11 +199,30 @@ export default function App() {
               maxWidth: '90%',
               maxHeight: '90%',
               objectFit: 'contain',
+              zIndex: 1002,
             }}
-            onClick={e => e.stopPropagation()} // Evita que el clic en la imagen cierre el overlay
+            onClick={e => e.stopPropagation()}
           />
+          <button
+            onClick={nextImage}
+            disabled={currentIndex === data.length - 1}
+            style={{
+              position: 'absolute',
+              right: 40,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              fontSize: 32,
+              background: 'none',
+              border: 'none',
+              color: 'white',
+              cursor: currentIndex === data.length - 1 ? 'not-allowed' : 'pointer',
+              zIndex: 1001,
+            }}
+          >
+            &#8594;
+          </button>
         </div>
       )}
     </>
-  )
+  );
 }
