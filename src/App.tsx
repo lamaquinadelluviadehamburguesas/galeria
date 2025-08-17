@@ -127,7 +127,6 @@ export default function App() {
     return () => {};
   }, [selectedImage, currentIndex]);
 
-  // Manejo de deslizamiento táctil
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStartX(e.touches[0].clientX);
     setIsDragging(true);
@@ -137,7 +136,7 @@ export default function App() {
     if (!isDragging || touchStartX === null) return;
     const currentX = e.touches[0].clientX;
     const diff = touchStartX - currentX;
-    if (Math.abs(diff) > 50) { // Umbral de 50px para detectar deslizamiento
+    if (Math.abs(diff) > 50) {
       if (diff > 0) {
         nextImage();
       } else {
@@ -161,13 +160,14 @@ export default function App() {
             position: 'fixed',
             top: 0,
             left: 0,
-            width: '100%',
-            height: '100%',
+            width: '100vw',
+            height: '100vh',
             backgroundColor: 'rgba(0, 0, 0, 0.8)',
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
             zIndex: 1000,
+            boxSizing: 'border-box',
           }}
           onClick={() => setSelectedImage(null)}
           onTouchStart={handleTouchStart}
@@ -179,10 +179,10 @@ export default function App() {
             disabled={currentIndex === 0}
             style={{
               position: 'absolute',
-              left: 40,
+              left: '5vw',
               top: '50%',
               transform: 'translateY(-50%)',
-              fontSize: 32,
+              fontSize: 'clamp(24px, 5vw, 32px)',
               background: 'none',
               border: 'none',
               color: 'white',
@@ -192,26 +192,43 @@ export default function App() {
           >
             &#8592;
           </button>
-          <img
-            src={selectedImage.css}
-            alt="Ampliada"
+          <div
             style={{
-              maxWidth: '90%',
-              maxHeight: '90%',
-              objectFit: 'contain',
-              zIndex: 1002,
+              position: 'relative',
+              width: '90vw',
+              height: '90vh',
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              backgroundImage: 'url(/frames/new-frame.png)',
+              backgroundSize: 'contain',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
             }}
-            onClick={e => e.stopPropagation()}
-          />
+          >
+            <img
+              src={selectedImage.css}
+              alt="Ampliada"
+              style={{
+                maxWidth: '80%', /* Ajuste para que quepa dentro del marco */
+                maxHeight: '80%',
+                objectFit: 'contain',
+                zIndex: 1002,
+              }}
+              onClick={e => e.stopPropagation()}
+            />
+          </div>
           <button
             onClick={nextImage}
             disabled={currentIndex === data.length - 1}
             style={{
               position: 'absolute',
-              right: 40,
+              right: '5vw',
               top: '50%',
               transform: 'translateY(-50%)',
-              fontSize: 32,
+              fontSize: 'clamp(24px, 5vw, 32px)',
               background: 'none',
               border: 'none',
               color: 'white',
