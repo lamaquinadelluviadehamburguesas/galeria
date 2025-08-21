@@ -47,13 +47,16 @@ function Masonry({ onSelectImage, isOverlayActive }: MasonryProps) {
 
   const transitions = useTransition(gridItems, {
     key: (item: { css: string; height: number }) => item.css,
-    from: ({ x, y, width, height }) => ({ x, y, width, height, opacity: 0 }),
-    enter: ({ x, y, width, height }) => ({ x, y, width, height, opacity: 1 }),
+    from: ({ x, y, width, height }) => ({ x, y, width, height, opacity: 0, scale: 1, rotateY: '0deg' }),
+    enter: ({ x, y, width, height }) => ({ x, y, width, height, opacity: 1, scale: 1, rotateY: '0deg' }),
     update: (animatedProps: { x: number, y: number, width: number, height: number, opacity: number }, item: { css: string; height: number }) => ({
       x: animatedProps.x,
       y: animatedProps.y,
-      width: item.css === hoveredItemKey ? animatedProps.width * 1.1 : animatedProps.width,
-      height: item.css === hoveredItemKey ? animatedProps.height * 1.1 : animatedProps.height,
+      width: animatedProps.width,
+      height: animatedProps.height,
+      scale: item.css === hoveredItemKey ? 1.1 : 1,
+      opacity: animatedProps.opacity,
+      rotateY: item.css === hoveredItemKey ? '180deg' : '0deg',
     }),
     leave: { height: 0, opacity: 0 },
     config: { mass: 5, tension: 500, friction: 100 },
@@ -71,12 +74,12 @@ function Masonry({ onSelectImage, isOverlayActive }: MasonryProps) {
     >
       {transitions((style, item) => (
         <a.div
-          style={style}
+          style={{ ...style, transformStyle: 'preserve-3d' }}
           onMouseEnter={() => setHoveredItemKey(item.css)}
           onMouseLeave={() => setHoveredItemKey(null)}
           onClick={() => onSelectImage(item)}
         >
-          <div style={{ backgroundImage: `url(${item.css})` }} />
+          <div style={{ backgroundImage: `url(${item.css})`, backfaceVisibility: 'hidden' }} />
         </a.div>
       ))}
     </div>
